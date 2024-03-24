@@ -1,32 +1,100 @@
 from functools import reduce
 
-def miembro(ele, lista):
-    return any(filter(lambda x: x == ele, lista))
+def member(ele, lst):
+    """
+    Check if an element exists in a list.
 
-def remove_if(fun, lista):
-    return list(filter(lambda x: not fun(x), lista))
+    Args:
+    ele: The element to check.
+    lst: The list to search.
+
+    Returns:
+    True if the element exists in the list, otherwise False.
+    """
+    return any(filter(lambda x: x == ele, lst))
+
+def remove_if(fun, lst):
+    """
+    Remove elements from a list based on a given condition.
+
+    Args:
+    fun: The condition function.
+    lst: The list to filter.
+
+    Returns:
+    A new list with elements filtered out based on the condition.
+    """
+    return list(filter(lambda x: not fun(x), lst))
 
 
-def vecinos(nodo, obstaculos, fin):
-    x, y = nodo
+def neighbors(node, obstacles, end):
+    """
+    Find neighboring coordinates of a given node.
+
+    Args:
+    node: The current coordinate.
+    obstacles: List of obstacle coordinates.
+    end: The target coordinate.
+
+    Returns:
+    A list of neighboring coordinates sorted by their proximity to the target.
+    """
+    x, y = node
     neighbours = [(x+1, y), (x-1, y), (x, y+1), (x, y-1)]
-    valid_neighbours = list(filter(lambda coord: coord[0] >= 0 and coord[1] >= 0 and coord not in obstaculos, neighbours))
-    sorted_neighbours = sorted(valid_neighbours, key=lambda coord: abs(coord[0] - fin[0]) + abs(coord[1] - fin[1]))
+    valid_neighbours = list(filter(lambda coord: 0 <= coord[0] < 18 and 0 <= coord[1] < 20 and coord[0] >= 0 and coord[1] >= 0 and coord not in obstacles, neighbours))
+    sorted_neighbours = sorted(valid_neighbours, key=lambda coord: abs(coord[0] - end[0]) + abs(coord[1] - end[1]))
     return sorted_neighbours
 
-def extender(ruta, obstaculos, visitados, fin):
-    return remove_if(lambda x: miembro(x, ruta) or miembro(x, visitados), vecinos(ruta[-1], obstaculos, fin))
+def extend(path, obstacles, visited, end):
+    """
+    Extend a path to neighboring coordinates.
 
-def prof(ini, fin, obstaculos):
-    return prof_aux(fin, [(ini,)], obstaculos, set())
+    Args:
+    path: The current path.
+    obstacles: List of obstacle coordinates.
+    visited: Set of visited coordinates.
+    end: The target coordinate.
 
-def prof_aux(fin, rutas, obstaculos, visitados):
-    if not rutas:
-        return None  # No se encontró ninguna ruta válida
-    elif fin == rutas[0][-1]:
-        return list(reversed(rutas[0]))  # Se encontró una ruta válida
+    Returns:
+    A list of extended paths.
+    """
+    return remove_if(lambda x: member(x, path) or member(x, visited), neighbors(path[-1], obstacles, end))
+
+def depth_first_search(start, end, obstacles):
+    """
+    Perform depth-first search to find a path from start to end.
+
+    Args:
+    start: The starting coordinate.
+    end: The target coordinate.
+    obstacles: List of obstacle coordinates.
+
+    Returns:
+    The path from start to end if found, otherwise None.
+    """
+    return depth_first_search_aux(end, [(start,)], obstacles, set())
+
+def depth_first_search_aux(end, paths, obstacles, visited):
+    """
+    Auxiliary function for depth-first search.
+
+    Args:
+    end: The target coordinate.
+    paths: List of current paths.
+    obstacles: List of obstacle coordinates.
+    visited: Set of visited coordinates.
+
+    Returns:
+    The path from start to end if found, otherwise None.
+    """
+    if not paths:
+        return None  # No valid path found
+    elif end == paths[0][-1]:
+        return list(reversed(paths[0]))  # Found a valid path
     else:
-        nuevas_rutas = reduce(lambda acc, ruta: acc + [ruta + (vecino,) for vecino in extender(ruta, obstaculos, visitados, fin)], rutas, [])
-        nuevos_visitados = visitados.union(reduce(lambda acc, ruta: acc.union({ruta[-1]}), nuevas_rutas, set()))
-        mejor_ruta = min(nuevas_rutas, key=lambda ruta: sum(map(lambda coord: abs(coord[0] - fin[0]) + abs(coord[1] - fin[1]), ruta)))
-        return prof_aux(fin, [mejor_ruta], obstaculos, nuevos_visitados)
+        new_paths = reduce(lambda acc, path: acc + [path + (neighbor,) for neighbor in extend(path, obstacles, visited, end)], paths, [])
+        if not new_paths:
+            return None  # No new paths available
+        new_visited = visited.union(reduce(lambda acc, path: acc.union({path[-1]}), new_paths, set()))
+        best_path = min(new_paths, key=lambda path: sum(map(lambda coord: abs(coord[0] - end[0]) + abs(coord[1] - end[1]), path)))
+        return depth_first_search_aux(end, [best_path], obstacles, new_visited)
